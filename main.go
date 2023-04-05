@@ -78,17 +78,31 @@ func main() {
 		// Construct a temporary session with user's OAuth2 access_token.
 		ts, _ := discordgo.New("Bearer " + tokens.AccessToken)
 
-		// Retrive the user data.
-		u, err := ts.User("@me")
+		// Retrive the user connections.
+		conns, err := ts.UserConnections()
 		if err != nil {
 			w.Write([]byte(err.Error()))
 			return
 		}
+		creator := findGitHubAccount(conns)
+		if creator == "" {
+			w.Write([]byte("You need to link your GitHub account to Discord."))
+			return
+		}
 
 		// And show it to the user.
-		w.Write([]byte(fmt.Sprintf("Your username is: %s", u.Username)))
+		w.Write([]byte(fmt.Sprintf("Your GitHub account: https://github.com/%s", creator)))
 	})
 	port := ":8000"
-	log.Printf("server listening at http://localhost%s", port)
+	log.Printf("server listening at http://localhost%s\n", port)
 	http.ListenAndServe(port, nil)
+}
+
+func findGitHubAccount(conns []*discordgo.UserConnection) string {
+	for _, conn := range conns {
+		if conn.Type == "github" {
+			return conn.Name
+		}
+	}
+	return ""
 }
